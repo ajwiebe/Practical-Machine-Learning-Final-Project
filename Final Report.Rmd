@@ -1,0 +1,84 @@
+---
+title: "Practical Machine Learning Final Project"
+output: html_document
+---
+# Overview
+This project serves to create a model that uses various measurements to predict the class of movement done based on measurements taken from accelerometers attached to participants. Various models were tested to determine which was the most effective at predicting the "classe" variable while implementing cross validation. The model was selected based on the accuracy of each individual model. A combination of several models was also tested. 
+
+## Getting and Cleaning Data
+The appropriate packages were loaded and the data was processed. 
+``` {r echo = T}
+url1 <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+url2 <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+download.file(url1, destfile = "training.csv")
+download.file(url2, destfile = "testing.csv")
+training <- read.csv("training.csv")
+testing <- read.csv("testing.csv")
+library(caret)
+library(AppliedPredictiveModeling)
+library(ggplot2)
+library(rpart)
+library(gbm)
+```
+Columns of data were removed if they were missing a significant portion of the entries. Additionally, the first seven columns were removed becasue they contained no information about the movements performed by the subjects. 
+``` {r echo = T}
+training <- training[, colSums(is.na(training)) == 0]
+testing <- testing[, colSums(is.na(testing))== 0]
+testing <- testing[, -c(1:7)]
+training <- training[, -c(1:7)]
+```
+The original training data was divided into a new training and testing set, with the original testing set becoming the validation set. Any variable with a variation close to zero was removed from all sets as an ineffective predictor. 
+``` {r echo = T}
+set.seed(15)
+inTrain <- createDataPartition(training$classe, p = 0.7, list =F)
+train <- training[inTrain, ]
+test <- training[-inTrain, ]
+validation <- testing
+nearzero <- nearZeroVar(train)
+nearzero2 <- nearZeroVar(test)
+train <- train[, -nearzero]
+test <- test[, -nearzero2]
+```
+## Fitting Models 
+Three models were fit, a random tree model, a gradient boosting model, and a Latent Dirichlet allocation. A fourth model was created that stacked all three. The accuracy of each model was used to determine its fittness for use. Each model was fitted with cross validation.  
+``` {r echo = T}
+set.seed(15)
+rfControl <- trainControl(method = "cv", number = 5, verboseIter = F)
+model1 <- train(classe~., data = train, method = "rf", trControl = rfControl)
+gbmControl <- trainControl(method = "repeatedcv", number = 5, repeats = 1)
+model2 <- train(classe~., data = train, method = "gbm", trControl = gbmControl, verbose = F)
+ldaControl <- trainControl(method = "repeatedcv", number = 5, repeats = 1)
+model3 <- train(classe~., data = train, method = "lda", trControl = ldaControl)
+pred1 <- predict(model1, newadta= test)
+pred2 <- predict(model2, newdata = test)
+pred3 <- predict(model3, newdata = test)
+predDF <- data.frame(pred1, pred2, pred3, classe = test$classe)
+combModel <- train(classe~., method = "rf", data = predDF)
+combPred <- predict(combModel, test)
+confusionMatrix(pred1, as.factor(test$classe))$overall
+confusionMatrix(pred2, as.factor(test$classe))$overall
+confusionMatrix(pred3, as.factor(test$classe))$overall
+## clearly the worst one 
+confusionMatrix(combPred, as.factor(test$classe))$overall
+```
+The first model, the random forest model, is the most accurate. The Latent Dirichlet allocation has the worst accuracy, so it will be disregarded immediately. The stacked model has the same accuracy as the random forest model, and therefore will also be disregarded in order to avoid overfitting. The random forest model, coded as "model1" will be used to predict on the validation set for the final quiz. 
+
+Out of sample errors are as follows, in the order of model fitting. 
+``` {r echo = T}
+acs <- c(0.9918437, 0.9651657, 0.7033135, 0.9918437)
+OutSampError <- 1 - acs
+print(OutSampError)
+```
+## Plotting Models
+Plots were created for the first two models to compare and contrast. 
+``` {r echo = T}
+plot(model1, main = "Random Forest Error vs Trees", xlab = "Trees")
+plot(model2, main = "GBM Accuracy vs Number of Boosting Iterations")
+```
+## Final Results
+The chosen model was used to predict on the validation data set in order to answer the quiz questions. 
+``` {r echo = T}
+predValidation <- predict(model1, newdata = validation) 
+predValidation 
+```
+A random tree model was chosen with an accuracy of 99.2% and an out of sample error of 0.082%. 
