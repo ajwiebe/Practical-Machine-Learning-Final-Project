@@ -29,21 +29,26 @@ test <- test[, -nearzero2]
 set.seed(15)
 rfControl <- trainControl(method = "cv", number = 5, verboseIter = F)
 model1 <- train(classe~., data = train, method = "rf", trControl = rfControl)
+set.seed(15)
 gbmControl <- trainControl(method = "repeatedcv", number = 5, repeats = 1)
 model2 <- train(classe~., data = train, method = "gbm", trControl = gbmControl, verbose = F)
+set.seed(15)
 ldaControl <- trainControl(method = "repeatedcv", number = 5, repeats = 1)
 model3 <- train(classe~., data = train, method = "lda", trControl = ldaControl)
 pred1 <- predict(model1, newadta= test)
 pred2 <- predict(model2, newdata = test)
 pred3 <- predict(model3, newdata = test)
-predDF <- data.frame(pred1, pred2, pred3, classe = test$classe)
+predDF <- data.frame(pred1, pred2, pred3, classe = test$classe, cache = T)
 combModel <- train(classe~., method = "rf", data = predDF)
 combPred <- predict(combModel, test)
-confusionMatrix(pred1, as.factor(test$classe))$overall
-confusionMatrix(pred2, as.factor(test$classe))$overall
-confusionMatrix(pred3, as.factor(test$classe))$overall
+m1 <- confusionMatrix(pred1, as.factor(test$classe))$overall
+m1
+m2 <- confusionMatrix(pred2, as.factor(test$classe))$overall
+m2
+m3 <- confusionMatrix(pred3, as.factor(test$classe))$overall
+m3
 ## clearly the worst one 
-confusionMatrix(combPred, as.factor(test$classe))$overall
+cm <- confusionMatrix(combPred, as.factor(test$classe))$overall
 
 acs <- c(0.9918437, 0.9651657, 0.7033135, 0.9918437)
 OutSampError <- 1 - acs

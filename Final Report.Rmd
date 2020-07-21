@@ -1,6 +1,8 @@
 ---
 title: "Practical Machine Learning Final Project"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
 # Overview
 This project serves to create a model that uses various measurements to predict the class of movement done based on measurements taken from accelerometers attached to participants. Various models were tested to determine which was the most effective at predicting the "classe" variable while implementing cross validation. The model was selected based on the accuracy of each individual model. A combination of several models was also tested. 
@@ -52,6 +54,8 @@ model3 <- train(classe~., data = train, method = "lda", trControl = ldaControl)
 pred1 <- predict(model1, newadta= test)
 pred2 <- predict(model2, newdata = test)
 pred3 <- predict(model3, newdata = test)
+```
+``` {r echo = T}
 predDF <- data.frame(pred1, pred2, pred3, classe = test$classe)
 combModel <- train(classe~., method = "rf", data = predDF)
 combPred <- predict(combModel, test)
